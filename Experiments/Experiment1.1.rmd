@@ -1,0 +1,70 @@
+---
+title: "Experiment1.1"
+author: "Eliyahu Addess"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+# load libraries
+library(tidyverse)
+library(future.apply) #parallel processing
+library(tictoc) #timing code
+library(knitr) #tables
+
+#load functions
+source("ProjectFunctions.R")
+
+# set up parallel processing
+plan(multisession)
+
+# set seed for reproducibility
+set.seed(42)
+
+# load data
+data <- read.csv("data_generic.csv")
+```
+
+
+```{r}
+# fit base model
+mod1 <- lm(y~x1+ x2 + x3 +x4 +x5 +x6 +x7 +x8 +x9, data = data)
+coefs1 <- unname(mod1$coefficients)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# run simulations
+# this returns a matrix where each column is a simulation run,
+# and the rows are the selections of a criteria
+tic()
+MC1.1 <- future_replicate(1000, experiment1(sd = 10000, data = data),
+                        future.seed = TRUE)
+toc()
+```
+
+
+```{r}
+# transpose so each row is a simulation run
+# and each column represents the selections of a criteria
+# convert to data frame
+MC1.1 <- as.data.frame(t(MC1.1))
+kable(head(MC1.1))
+```
+
+
+```{r}
+#results
+histo(MC1.1, title =  "MC1.1")
+
+kable(props(MC1.1))
+```
+
+```{r}
+kable(props(MC1.1), "latex") 
+```
+
