@@ -1,0 +1,91 @@
+# load libraries
+library(tidyverse)
+library(corrplot)
+
+#set seed
+set.seed(742)
+
+# load data
+data <- read.csv("data_generic.csv")
+
+# fit base model
+mod1 <- lm(y~x1+ x2 + x3 +x4 +x5 +x6 +x7 +x8 +x9, data = data)
+coefs1 <- unname(mod1$coefficients)
+
+# Here we shift. mod1=parsim, mod2 = undefit, mod3=false, mod4 = overfit.
+# Also parsim_mod1 includes x7 and x8.
+
+
+        
+        # set error
+        e <- rnorm(length(data$x1), mean = 0, sd = 10000)
+        
+        # generate dependent variable from regression model
+        y_sim <- coefs1[1] + (coefs1[2] * data$x1)  + (coefs1[3] * data$x2) +
+                (coefs1[4] * data$x3) + (coefs1[5] * data$x4) + 
+                (coefs1[6] * data$x5) + (coefs1[7] * data$x6) +
+                (coefs1[8] * data$x7) + (coefs1[9] * data$x8) +
+                (coefs1[10] * data$x9) + e
+        
+        # make new data frame
+        sim_data <- bind_cols(data[,1:15], y_sim)
+        # make sure last column is called y_sim
+        colnames(sim_data)[16] <- "y_sim"
+        
+        # parsimonious model
+        # Here is what is different from experiment 2!
+        # We added x7 and x8 to the model
+        parsim_mod1 <- lm(y_sim~ x1 +x2 +x3 + x4 + x5 + x6 +x7 +x8,
+                          data = sim_data)
+        
+        # under-fit model
+        under_mod2 <- lm(y_sim ~ x1 + x2 +x3, data = sim_data)
+        
+        # false model
+        false_mod3 <- lm(y_sim ~ x1 + x3 + x5 + x7 + x10 + x11 + x12 + x14,
+                         data = sim_data)
+        
+        # saturated/over-fit model
+        over_mod4 <- lm(y_sim~., data = sim_data)
+        
+        # calculate model selection criteria
+        r_sqr <- c(summary(parsim_mod1)$r.squared,
+                   summary(under_mod2)$r.squared, summary(false_mod3)$r.squared,
+                   summary(over_mod4)$r.squared)
+        
+        adj_r_sqr <- c(summary(parsim_mod1)$adj.r.squared,
+                       summary(under_mod2)$adj.r.squared, 
+                       summary(false_mod3)$adj.r.squared,
+                       summary(over_mod4)$adj.r.squared)
+        
+        AIC <- c(AIC(parsim_mod1), AIC(under_mod2), 
+                 AIC(false_mod3), AIC(over_mod4))
+        
+        BIC <- c(BIC(parsim_mod1), BIC(under_mod2), 
+                 BIC(false_mod3), BIC(over_mod4))
+        
+        
+        
+        # r-squared criteria indicate model with largest value
+        r_sqr_select <- which.max(r_sqr)
+        adj_r_sqr_select <- which.max(adj_r_sqr)
+        
+        # AIC and BIC indicate the model with smallest value
+        AIC_select <- which.min(AIC)
+        BIC_select <- which.min(BIC)
+        
+        # make selections vector
+        selections <- c(r_sqr_select, adj_r_sqr_select, 
+                        AIC_select, BIC_select)
+        names(selections) <- c("r_sqr_select", "adj_r_sqr_select",
+                               "AIC_select", "BIC_select")
+
+# examine selections  and criteria              
+selections
+r_sqr
+adj_r_sqr
+AIC
+BIC
+# examine correlation plot
+corrplot(cor(sim_data),method = "number")
+
